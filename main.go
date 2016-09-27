@@ -5,6 +5,8 @@ import (
 	"image"
 	"math"
 	"strconv"
+
+	"github.com/MaxHalford/gago"
 )
 
 var W, H, R int
@@ -57,7 +59,6 @@ func getFit(apply func([]float64, *image.RGBA, int), org, diff *image.RGBA, max 
 
 func main() {
 	totalIncreases := 0
-	gas := make([]float64, 0)
 
 	org, err := load("./input.png")
 	if err != nil {
@@ -66,24 +67,33 @@ func main() {
 	bounds := org.Bounds()
 	W, H = bounds.Dx(), bounds.Dy()
 	if W > H {
-		R = W
+		R = W * 3 / 2
 	} else {
-		R = H
+		R = H * 3 / 2
 	}
 
-	max := fit(nil, nil, nil, org, 100)
 	previousFitness := math.Inf(1)
 	img := image.NewRGBA(image.Rect(0, 0, W, H))
+	max := fit(nil, nil, img, org, 100)
+	fmt.Println(max)
 
 	for j := 0; j < 500; j++ {
-		ga := CircleGa(img, org, max)
+		var ga gago.GA
+		usingCircle := useCircle(img, org, max)
+		if usingCircle {
+			ga = CircleGa(img, org, max)
+			fmt.Println("Using Circle")
+		} else {
+			ga = BezierGa(img, org, max)
+			fmt.Println("Using Bezier")
+		}
+
 		ga.Initialize()
 		fitness := ga.Best.Fitness
+		lastFitness := fitness
 		count := 0
 		i := 0
-		prevI := 0
 		increases := 0
-		prevIncrease := 0
 
 		for maxCount := 250; fitness > previousFitness || i < 200; maxCount += 250 {
 			if maxCount != 250 {
@@ -106,9 +116,8 @@ func main() {
 				}
 				i++
 
-				if i-prevI > 25 && prevIncrease < increases {
-					prevI = i
-					prevIncrease = increases
+				if lastFitness-fitness >= 0.005 {
+					lastFitness = fitness
 					genome := ga.Best.Genome
 					var casted = make([]float64, len(genome))
 					for i := range genome {
@@ -120,7 +129,11 @@ func main() {
 
 					img2 := image.NewRGBA(image.Rect(0, 0, W, H))
 					clone(img, img2)
-					applyCircle(casted, img2, 0)
+					if usingCircle {
+						ApplyCircle(casted, img2, 0)
+					} else {
+						ApplyBezier(casted, img2, 0)
+					}
 					go save("./output/gen"+strconv.Itoa(j)+"-"+
 						strconv.Itoa(maxCount/250)+"-"+strconv.Itoa(increases)+
 						".png", img2)
@@ -134,12 +147,31 @@ func main() {
 			casted[i] = genome[i].(float64)
 		}
 
-		applyCircle(casted, img, 0)
+		if usingCircle {
+			ApplyCircle(casted, img, 0)
+		} else {
+			ApplyBezier(casted, img, 0)
+		}
+
 		go save("./output/gen"+strconv.Itoa(j+1)+"-0-0.png", img)
 		fmt.Printf("Went from %f%% to %f%%\n", previousFitness, fitness)
-		gas = append(gas, casted[0], casted[1], casted[2], casted[3],
-			casted[4], casted[5])
 		previousFitness = fitness
 	}
 
+}
+
+func useCircle(img, org *image.RGBA, max float64) bool {
+	bezier := BezierGa(img, org, max)
+	bezier.Initialize()
+	circle := CircleGa(img, org, max)
+	circle.Initialize()
+	for i := 0; i < 10; i++ {
+		bezier.Enhance()
+		circle.Enhance()
+	}
+	fmt.Printf("%f, %f\n", bezier.Best.Fitness, circle.Best.Fitness)
+	if bezier.Best.Fitness <= circle.Best.Fitness {
+		return false
+	}
+	return true
 }

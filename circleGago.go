@@ -10,7 +10,7 @@ import (
 	"github.com/MaxHalford/gago"
 )
 
-func applyCircle(X []float64, img *image.RGBA, verbose int) {
+func ApplyCircle(X []float64, img *image.RGBA, verbose int) {
 	for i := 0; i+5 < len(X); i += 6 {
 		x := X[i+0] * float64(W)
 		y := X[i+1] * float64(H)
@@ -30,11 +30,11 @@ func applyCircle(X []float64, img *image.RGBA, verbose int) {
 
 func CircleGa(org, diff *image.RGBA, max float64) gago.GA {
 	return gago.GA{
-		NbrPopulations: 4,
+		NbrPopulations: 6,
 		NbrIndividuals: 80,
 		NbrGenes:       6,
 		Ff: gago.Float64Function{
-			Image: getFit(applyCircle, org, diff, max),
+			Image: getFit(ApplyCircle, org, diff, max),
 		},
 		Initializer: gago.InitUniformF{
 			Lower: 1,
