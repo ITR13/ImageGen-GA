@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"math"
 	"strconv"
 )
@@ -25,31 +24,14 @@ func limit(v, max float64) float64 {
 	return v
 }
 
-func applyCircle(X []float64, img *image.RGBA, verbose int) {
-	for i := 0; i+5 < len(X); i += 6 {
-		x := X[i+0] * float64(W)
-		y := X[i+1] * float64(H)
-		r := X[i+2]*float64(R) + 10
-		red := X[i+3] * 255
-		green := X[i+4] * 255
-		blue := X[i+5] * 255
-		c := color.RGBA{uint8(red), uint8(green), uint8(blue), 255}
-		if verbose > 0 {
-			fmt.Printf("%f, %f, %f, %f, %f, %f\n", x, y, r, red, green, blue)
-			fmt.Println(c)
-		}
-		drawCircle(int(x), int(y), int(r),
-			c, img, verbose-1)
-	}
-}
-
-func fit(X []float64, org *image.RGBA, diff *image.RGBA, max float64) float64 {
+func fit(X []float64, apply func([]float64, *image.RGBA, int),
+	org *image.RGBA, diff *image.RGBA, max float64) float64 {
 	img := image.NewRGBA(image.Rect(0, 0, W, H))
 	if org != nil {
 		clone(org, img)
 	}
-	if X != nil {
-		applyCircle(X, img, 0)
+	if X != nil && apply != nil {
+		apply(X, img, 0)
 	}
 	sum := float64(0)
 	for x := 0; x < W; x++ {
@@ -67,15 +49,9 @@ func fit(X []float64, org *image.RGBA, diff *image.RGBA, max float64) float64 {
 	return sum * 100 / max
 }
 
-func getFit(org, diff *image.RGBA, max float64) func([]float64) float64 {
+func getFit(apply func([]float64, *image.RGBA, int), org, diff *image.RGBA, max float64) func([]float64) float64 {
 	return func(X []float64) float64 {
-		return fit(X, org, diff, max)
-	}
-}
-
-func getApplyCircle(org *image.RGBA, verbose int) func([]float64) {
-	return func(X []float64) {
-		applyCircle(X, org, verbose)
+		return fit(X, apply, org, diff, max)
 	}
 }
 
@@ -95,12 +71,12 @@ func main() {
 		R = H
 	}
 
-	max := fit(nil, nil, org, 100)
+	max := fit(nil, nil, nil, org, 100)
 	previousFitness := math.Inf(1)
 	img := image.NewRGBA(image.Rect(0, 0, W, H))
 
 	for j := 0; j < 500; j++ {
-		ga := CircleGa(getFit(img, org, max))
+		ga := CircleGa(img, org, max)
 		ga.Initialize()
 		fitness := ga.Best.Fitness
 		count := 0
@@ -144,7 +120,7 @@ func main() {
 
 					img2 := image.NewRGBA(image.Rect(0, 0, W, H))
 					clone(img, img2)
-					getApplyCircle(img2, 0)(casted)
+					applyCircle(casted, img2, 0)
 					go save("./output/gen"+strconv.Itoa(j)+"-"+
 						strconv.Itoa(maxCount/250)+"-"+strconv.Itoa(increases)+
 						".png", img2)
@@ -158,11 +134,11 @@ func main() {
 			casted[i] = genome[i].(float64)
 		}
 
-		getApplyCircle(img, 0)(casted)
+		applyCircle(casted, img, 0)
 		go save("./output/gen"+strconv.Itoa(j+1)+"-0-0.png", img)
 		fmt.Printf("Went from %f%% to %f%%\n", previousFitness, fitness)
 		gas = append(gas, casted[0], casted[1], casted[2], casted[3],
-			casted[4], casted[5], casted[6])
+			casted[4], casted[5])
 		previousFitness = fitness
 	}
 

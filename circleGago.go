@@ -1,19 +1,40 @@
 package main
 
 import (
+	"fmt"
+	"image"
+	"image/color"
 	"math"
 	"math/rand"
 
 	"github.com/MaxHalford/gago"
 )
 
-func CircleGa(function func([]float64) float64) gago.GA {
+func applyCircle(X []float64, img *image.RGBA, verbose int) {
+	for i := 0; i+5 < len(X); i += 6 {
+		x := X[i+0] * float64(W)
+		y := X[i+1] * float64(H)
+		r := X[i+2]*float64(R) + 10
+		red := X[i+3] * 255
+		green := X[i+4] * 255
+		blue := X[i+5] * 255
+		c := color.RGBA{uint8(red), uint8(green), uint8(blue), 255}
+		if verbose > 0 {
+			fmt.Printf("%f, %f, %f, %f, %f, %f\n", x, y, r, red, green, blue)
+			fmt.Println(c)
+		}
+		drawCircle(int(x), int(y), int(r),
+			c, img, verbose-1)
+	}
+}
+
+func CircleGa(org, diff *image.RGBA, max float64) gago.GA {
 	return gago.GA{
 		NbrPopulations: 4,
 		NbrIndividuals: 80,
 		NbrGenes:       6,
 		Ff: gago.Float64Function{
-			Image: function,
+			Image: getFit(applyCircle, org, diff, max),
 		},
 		Initializer: gago.InitUniformF{
 			Lower: 1,
