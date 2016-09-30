@@ -55,6 +55,46 @@ func drawLine(x0, y0, x1, y1 int, c color.RGBA, img *image.RGBA, verbose int) {
 	}
 }
 
+//Really inefficient version with width
+func drawLineWithWidth(x0, y0, x1, y1, r int, c color.RGBA, img *image.RGBA) {
+	dx := x1 - x0
+	if dx < 0 {
+		dx = -dx
+	}
+	dy := y1 - y0
+	if dy < 0 {
+		dy = -dy
+	}
+	var sx, sy int
+	if x0 < x1 {
+		sx = 1
+	} else {
+		sx = -1
+	}
+	if y0 < y1 {
+		sy = 1
+	} else {
+		sy = -1
+	}
+	err := dx - dy
+
+	for {
+		drawCircle(x0, y0, r, c, img, 0)
+		if x0 == x1 && y0 == y1 {
+			break
+		}
+		e2 := 2 * err
+		if e2 > -dy {
+			err -= dy
+			x0 += sx
+		}
+		if e2 < dx {
+			err += dx
+			y0 += sy
+		}
+	}
+}
+
 //taken from: https://rosettacode.org/wiki/Bitmap/Midpoint_circle_algorithm#Go
 func drawCircle(x, y, r int, c color.RGBA, img *image.RGBA, verbose int) {
 	if verbose > 0 {
@@ -90,7 +130,7 @@ func drawCircle(x, y, r int, c color.RGBA, img *image.RGBA, verbose int) {
 }
 
 //Taken from: https://rosettacode.org/wiki/Bitmap/B%C3%A9zier_curves/Cubic#Go
-func drawBézier3(x1, y1, x2, y2, x3, y3, x4, y4, b3Seg int,
+func drawBézier3(x1, y1, x2, y2, x3, y3, x4, y4, r, b3Seg int,
 	c color.RGBA, img *image.RGBA) {
 	b3Segf := float64(b3Seg)
 
@@ -110,7 +150,11 @@ func drawBézier3(x1, y1, x2, y2, x3, y3, x4, y4, b3Seg int,
 	x0, y0 := px[0], py[0]
 	for i := 1; i <= b3Seg; i++ {
 		x1, y1 := px[i], py[i]
-		drawLine(x0, y0, x1, y1, c, img, 0)
+		if r > 1 {
+			drawLineWithWidth(x0, y0, x1, y1, r, c, img)
+		} else {
+			drawLine(x0, y0, x1, y1, c, img, 0)
+		}
 		x0, y0 = x1, y1
 	}
 }

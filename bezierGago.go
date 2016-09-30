@@ -20,15 +20,16 @@ func ApplyBezier(X []float64, img *image.RGBA, verbose int) {
 		y3 := int(X[i+5] * float64(H))
 		x4 := int(X[i+6] * float64(W))
 		y4 := int(X[i+7] * float64(H))
-		b3Seg := int(X[i+8]*60 + 2)
-		red := X[i+9] * 255
-		green := X[i+10] * 255
-		blue := X[i+11] * 255
+		r := int(X[i+8]*20 + 1)
+		b3Seg := int(X[i+9]*60 + 2)
+		red := X[i+10] * 255
+		green := X[i+11] * 255
+		blue := X[i+12] * 255
 		c := color.RGBA{uint8(red), uint8(green), uint8(blue), 255}
 		if verbose > 0 {
 			fmt.Println(c)
 		}
-		drawBézier3(x1, y1, x2, y2, x3, y3, x4, y4, b3Seg, c, img)
+		drawBézier3(x1, y1, x2, y2, x3, y3, x4, y4, r, b3Seg, c, img)
 	}
 }
 
@@ -36,7 +37,7 @@ func BezierGa(org, diff *image.RGBA, max float64) gago.GA {
 	return gago.GA{
 		NbrPopulations: 6,
 		NbrIndividuals: 80,
-		NbrGenes:       12,
+		NbrGenes:       13,
 		Ff: gago.Float64Function{
 			Image: getFit(ApplyBezier, org, diff, max),
 		},
@@ -67,13 +68,13 @@ func (cross BezierCross) Apply(p1 gago.Individual, p2 gago.Individual,
 	rng *rand.Rand) (gago.Individual, gago.Individual) {
 	var (
 		o1 = gago.Individual{
-			Genome:    make([]interface{}, 12),
+			Genome:    make([]interface{}, 13),
 			Fitness:   math.Inf(1),
 			Evaluated: false,
 			Name:      "-",
 		}
 		o2 = gago.Individual{
-			Genome:    make([]interface{}, 12),
+			Genome:    make([]interface{}, 13),
 			Fitness:   math.Inf(1),
 			Evaluated: false,
 			Name:      "-",
@@ -86,11 +87,13 @@ func (cross BezierCross) Apply(p1 gago.Individual, p2 gago.Individual,
 			o2.Genome[j] = (1-p)*p1.Genome[j].(float64) + p*p2.Genome[j].(float64)
 		}
 	}
+	for i := 8; i < 10; i++ {
+		p := rng.Float64()
+		o1.Genome[i] = p*p1.Genome[i].(float64) + (1-p)*p2.Genome[i].(float64)
+		o2.Genome[i] = (1-p)*p1.Genome[i].(float64) + p*p2.Genome[i].(float64)
+	}
 	p := rng.Float64()
-	o1.Genome[8] = p*p1.Genome[8].(float64) + (1-p)*p2.Genome[8].(float64)
-	o2.Genome[8] = (1-p)*p1.Genome[8].(float64) + p*p2.Genome[8].(float64)
-	p = rng.Float64()
-	for i := 9; i < 12; i++ {
+	for i := 10; i < 13; i++ {
 		o1.Genome[i] = p*p1.Genome[i].(float64) + (1-p)*p2.Genome[i].(float64)
 		o2.Genome[i] = (1-p)*p1.Genome[i].(float64) + p*p2.Genome[i].(float64)
 	}

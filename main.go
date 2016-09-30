@@ -77,14 +77,11 @@ func main() {
 	max := fit(nil, nil, img, org, 100)
 	fmt.Println(max)
 
-	for j := 0; j < 500; j++ {
-		var ga gago.GA
-		usingCircle := useCircle(img, org, max)
+	for j := 0; previousFitness >= 0.001; j++ {
+		usingCircle, ga := useCircle(img, org, max)
 		if usingCircle {
-			ga = CircleGa(img, org, max)
 			fmt.Println("Using Circle")
 		} else {
-			ga = BezierGa(img, org, max)
 			fmt.Println("Using Bezier")
 		}
 
@@ -160,18 +157,18 @@ func main() {
 
 }
 
-func useCircle(img, org *image.RGBA, max float64) bool {
+func useCircle(img, org *image.RGBA, max float64) (bool, gago.GA) {
 	bezier := BezierGa(img, org, max)
 	bezier.Initialize()
 	circle := CircleGa(img, org, max)
 	circle.Initialize()
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 40; i++ {
 		bezier.Enhance()
 		circle.Enhance()
 	}
 	fmt.Printf("%f, %f\n", bezier.Best.Fitness, circle.Best.Fitness)
 	if bezier.Best.Fitness <= circle.Best.Fitness {
-		return false
+		return false, bezier
 	}
-	return true
+	return true, circle
 }
